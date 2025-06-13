@@ -1,0 +1,19 @@
+import tensorflow as tf
+from tensorflow.keras.layers import Dense,Flatten,Conv2D,MaxPooling2D,Dropout
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.models import Sequential
+# Load data
+(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+train_images, test_images = train_images / 255.0, test_images / 255.0
+def build(act):
+  return  Sequential([Flatten(input_shape=(28,28,1)),
+                              Dense(512,activation=act),Dropout(0.5),
+                      Dense(256,activation=act),Dropout(0.5),
+                      Dense(10,activation='softmax')
+  ])
+act=['relu','tanh','sigmoid']
+for a in act:
+  model=build(a)
+  model.compile(optimizer='adam',loss='sparse_categorical_crossentropy',metrics=['accuracy'])
+  model.fit(train_images, train_labels,epochs=1)
+  print(model.evaluate(test_images, test_labels))
