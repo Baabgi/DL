@@ -1,0 +1,83 @@
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+def load_and_preprocess(image_path, mask_path, target_size=(128, 128)):
+    # Load and resize image and mask
+    image = load_img('/content/INP.png', target_size=target_size, color_mode='rgb')
+    mask = load_img('/content/MASK.png', target_size=target_size, color_mode='grayscale')
+
+    # Convert to numpy arrays and normalize
+    image = img_to_array(image) / 255.0
+    mask = img_to_array(mask) / 255.0
+    mask = np.round(mask)  # Ensure binary mask
+
+    return image, mask
+
+# Example usage
+image, mask = load_and_preprocess('/content/INP.png', '/content/MASK.png')
+def unet_model(input_size=(128, 128, 3)):
+    inputs = layers.Input(input_size)
+
+    # Encoder
+    c1 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(inputs)
+    c1 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(c1)
+    p1 = layers.MaxPooling2D((2, 2))(c1)
+
+    c2 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(p1)
+    c2 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(c2)
+    p2 = layers.MaxPooling2D((2, 2))(c2)
+
+    c3 = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(p2)
+    c3 = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(c3)
+    p3 = layers.MaxPooling2D((2, 2))(c3)
+
+    c4 = layers.Conv2D(256, (3, 3), activation='relu', padding='same')(p3)
+    c4 = layers.Conv2D(256, (3, 3), activation='relu', padding='same')(c4)
+
+    # Decoder
+    u5 = layers.Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(c4)
+    u5 = layers.concatenate([u5, c3])
+    c5 = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(u5)
+    c5 = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(c5)
+
+    u6 = layers.Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(c5)
+    u6 = layers.concatenate([u6, c2])
+    c6 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(u6)
+    c6 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(c6)
+
+    u7 = layers.Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(c6)
+    u7 = layers.concatenate([u7, c1])
+    c7 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(u7)
+    c7 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(c7)
+
+    outputs = layers.Conv2D(1, (1, 1), activation='sigmoid')(c7)
+
+    model = models.Model(inputs, outputs)
+    return model
+
+# Create U-Net model
+model = unet_model()
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+# Prepare data
+X = np.expand_dims(image, axis=0)  # Add batch dimension
+y = np.expand_dims(mask, axis=0)   # Add batch dimension
+
+# Train the model
+history = model.fit(X, y, epochs=10, batch_size=1)
+# Predict on the same image
+predicted_mask = model.predict(X)
+
+# Plot original image, ground truth mask, and predicted mask
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 3, 1)
+plt.title("Original Image")
+plt.imshow(image)
+plt.subplot(1, 3, 2)
+plt.title("Ground Truth Mask")
+plt.imshow(mask.squeeze(),cmap='gray')
+plt.subplot(1, 3, 3)
+plt.title("Predicted Mask")
+plt.imshow(predicted_mask.squeeze())
+plt.show()
