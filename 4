@@ -1,0 +1,26 @@
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense
+from tensorflow.keras.datasets import imdb
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+(X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=5000)
+X_train, X_test = pad_sequences(X_train, maxlen=200), pad_sequences(X_test, maxlen=200)
+
+model = Sequential([
+    Embedding(5000, 128, input_length=200),
+    LSTM(100),
+    Dense(1, activation='sigmoid')
+])
+
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.fit(X_train, y_train, epochs=1, batch_size=64, validation_data=(X_test, y_test))
+
+print("Test Accuracy:", model.evaluate(X_test, y_test)[1])
+from tensorflow.keras.preprocessing.text import Tokenizer
+def predict_sentiment(text):
+    sequence = pad_sequences(Tokenizer(num_words=5000).texts_to_sequences([text]), maxlen=200)
+    return "Positive" if model.predict(sequence)[0][0] > 0.5 else "Negative"
+
+text = "This movie was absolutely fantastic!"
+print("Predicted Sentiment:", predict_sentiment(text))
