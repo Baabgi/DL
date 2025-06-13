@@ -1,0 +1,21 @@
+import tensorflow as tf
+from tensorflow.keras.layers import Dense,Flatten,Conv2D,MaxPooling2D
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.models import Sequential
+# Load data
+(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+train_images, test_images = train_images / 255.0, test_images / 255.0  # Normalize
+model=Sequential([
+    Conv2D(32,(3,3),input_shape=(28,28,1),activation='relu'),
+    MaxPooling2D(2,2),
+    Flatten(),
+    Dense(64,activation='relu'),
+     Dense(64,activation='softmax')
+])
+model.compile(optimizer='adam',loss='sparse_categorical_crossentropy',metrics=['accuracy'])
+model.fit(train_images, train_labels,epochs=1,batch_size=64)
+pred=model.predict(test_images)
+import matplotlib.pyplot as plt
+for i in range(5):
+  plt.imshow(test_images[i])
+  plt.title(pred[i].argmax())
