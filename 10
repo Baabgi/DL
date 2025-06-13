@@ -1,0 +1,27 @@
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.datasets import reuters
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, SimpleRNN, Dense
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+max_words, maxlen = 10000, 30
+(x_train, _), (x_test, _) = reuters.load_data(num_words=max_words)
+word_index = reuters.get_word_index()
+
+all_sequences = np.concatenate((x_train, x_test))
+X, y = zip(*[(pad_sequences([seq[max(0, i-maxlen):i]], maxlen=maxlen)[0], seq[i]) 
+             for seq in all_sequences for i in range(1, len(seq))])
+
+X, y = np.array(X), np.array(y)
+
+model = Sequential([
+    Embedding(max_words, 64, input_length=maxlen),
+    SimpleRNN(64),
+    Dense(max_words, activation='softmax')
+])
+
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.fit(X, y, batch_size=128, epochs=1, validation_split=0.1)
+
+print("Predicted next word:", {v: k for k, v in word_index.items()}.get(np.argmax(model.predict(X[100][None])) - 3, '?'))
