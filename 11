@@ -1,0 +1,35 @@
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense
+
+text = "I love machine learning and deep learning is fun and powerful"
+tokenizer = Tokenizer()
+tokenizer.fit_on_texts([text])
+tokens = tokenizer.texts_to_sequences([text])[0]
+total_words = len(tokenizer.word_index) + 1
+sequences = [tokens[:i+1] for i in range(1, len(tokens))]
+
+max_len = max(map(len, sequences))
+X = np.array([np.pad(seq[:-1], (max_len-len(seq[:-1]), 0)) for seq in sequences])
+y = tf.keras.utils.to_categorical([seq[-1] for seq in sequences], num_classes=total_words)
+
+model = Sequential([
+    Embedding(total_words, 10, input_length=max_len - 1),
+    LSTM(100),
+    Dense(total_words, activation='softmax')
+])
+
+model.compile(loss='categorical_crossentropy', optimizer='adam')
+model.fit(X, y, epochs=200, verbose=0)
+
+def generate_text(seed_text, next_words=5):
+    for _ in range(next_words):
+        token_list = tokenizer.texts_to_sequences([seed_text])[0]
+        token_list = np.pad(token_list, (max_len - 1 - len(token_list), 0))[-(max_len - 1):]
+        predicted = np.argmax(model.predict(token_list.reshape(1, max_len - 1), verbose=0))
+        seed_text += ' ' + next((word for word, index in tokenizer.word_index.items() if index == predicted), '?')
+    return seed_text
+
+print("Generated Text:\n", generate_text("love"))
